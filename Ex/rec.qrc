@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/new">
+        <file>alarm_02.wav</file>
+    </qresource>
+</RCC>
