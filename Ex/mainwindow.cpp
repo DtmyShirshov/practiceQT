@@ -1,26 +1,33 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "settingwindow.h"
 #include <QtWidgets>
 #include <QTimer>
 #include <QMessageBox>
 #include <QtMultimedia/QSound>
 #include <QApplication>
+#include <QSettings>
+
 
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    /* Забираем заданный в настройках интервал таймера из файла config.ini */
+    QSettings settings("config.ini", QSettings::IniFormat);
+    int timerInterval = settings.value("timer").toInt() * 1000;
+
     ui->setupUi(this);
     this->setWindowTitle("My First Tray Programm");
 
+    /* Задаем иконку и подсказку при наведении на неё */
     trayIcon = new QSystemTrayIcon(this);
     trayIcon->setIcon(this->style()->standardIcon(QStyle::SP_DesktopIcon));
     trayIcon->setToolTip("ZabbixNotifications");
 
     /* Создаем контекстное меню */
     QMenu* menu = new QMenu(this);
-
 
     QAction* hideWindow = new QAction("Свернуть окно", this);
     QAction* viewWindow = new QAction("Развернуть окно", this);
@@ -32,7 +39,7 @@ MainWindow::MainWindow(QWidget *parent) :
        третий пункт меню завершает приложение.
     */
     connect(viewWindow, SIGNAL(triggered()), this, SLOT(show()));
-    connect(hideWindow, SIGNAL(triggered()), this, SLOT(hide()));
+    connect(hideWindow, SIGNAL(triggered()), this, SLOT(HideApp()));
     connect(quitAction, SIGNAL(triggered()), this, SLOT(ExitApp()));
 
     /* Добавляем кнопки в контекстное меню */
@@ -48,31 +55,104 @@ MainWindow::MainWindow(QWidget *parent) :
 
     /* Объявляем таймер, задаем ему интервал, подключаем сигнал таймаута к слоту onTimeout() */
     QTimer* timer = new QTimer(this);
-    timer->start(5000);
+    timer->start(timerInterval);
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
 
 }
 
-
+/* Выход из приложения с подтверждением действия */
 void MainWindow::ExitApp(){
 
-    QMessageBox *msgE = new QMessageBox;
-    msgE->setIcon(QMessageBox::Information);
-    msgE->setWindowTitle("Вы уверены?");
-    msgE->setText("Вы уверены, что хотите выйти?");
-    msgE->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-    msgE->open();
-
-    if(msgE->exec() == QMessageBox::Yes)
+    QSettings settings("config.ini", QSettings::IniFormat);
+    /* проверка, нажимал ли пользователь на "Больше не спрашивать?"
+       если да, то выйти из приложения без подтверждения действия,
+       если нет, то запросить подтверждение.
+    */
+    if(settings.value("dontShowExitMSG").toBool() == true)
     {
-       QApplication::quit();
+        QApplication::quit();
     }
     else
     {
-       msgE->close();
+        QCheckBox* cb = new QCheckBox("Больше не спрашивать");
+
+        QMessageBox *msgE = new QMessageBox(this);
+        msgE->setIcon(QMessageBox::Information);
+        msgE->setWindowTitle("Подвердите дейстиве");
+        msgE->setText("Вы уверены, что хотите выйти?");
+        msgE->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgE->setCheckBox(cb);
+        msgE->raise();
+        msgE->show();
+
+        if(msgE->exec() == QMessageBox::Yes)
+        {
+           QApplication::quit();
+
+           if(cb->isChecked() == true)
+           {
+               settings.setValue("dontShowExitMSG", true);
+           }
+        }
+        else
+        {
+           msgE->close();
+
+           if(cb->isChecked() == true)
+           {
+               settings.setValue("dontShowExitMSG", true);
+           }
+        }
+    }
+
+}
+
+/* Сворачивание приложения в трей с подтверждением действия */
+void MainWindow::HideApp(){
+    QSettings settings("config.ini", QSettings::IniFormat);
+    /* проверка, нажимал ли пользователь на "Больше не спрашивать?"
+       если да, то свернуть приложение без подтверждения действия,
+       если нет, то запросить подтверждение.
+    */
+    if(settings.value("dontShowHideMSG").toBool() == true)
+    {
+        hide();
+    }
+    else
+    {
+        if(this->isVisible())
+        {
+            QCheckBox* cb = new QCheckBox("Больше не спрашивать");
+            QMessageBox *msgH = new QMessageBox;
+            msgH->setIcon(QMessageBox::Information);
+            msgH->setWindowTitle("Подвердите действие");
+            msgH->setText("Приложение будет свернуто в трей!");
+            msgH->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+            msgH->setCheckBox(cb);
+            msgH->raise();
+            msgH->show();
+
+            if(msgH->exec() == QMessageBox::Yes)
+            {
+               hide();
+               if(cb->isChecked() == true)
+               {
+                   settings.setValue("dontShowHideMSG", true);
+               }
+            }
+            else
+            {
+               msgH->close();
+               if(cb->isChecked() == true)
+               {
+                   settings.setValue("dontShowHideMSG", true);
+               }
+            }
+        }
     }
 }
 
+/* Действие на таймаут таймера */
 void MainWindow::onTimeout(){
 
    QSound* sound=new QSound(":\\new\\alarm_02.wav");
@@ -81,15 +161,10 @@ void MainWindow::onTimeout(){
    QMessageBox* msg = new QMessageBox(this);
    msg->setWindowTitle("Действие");
    msg->setText("Внимание");
-   msg->setInformativeText("Прошло 15 секунд!");
-//   msg->raise();
+   msg->setInformativeText("Прошло  секунд!");
+   msg->raise();
    msg->show();
 
-   if(msg->exec() == QMessageBox::Ok && !this->isVisible())
-   {
-       this->show();
-       this->hide();
-   }
 }
 
 MainWindow::~MainWindow()
@@ -99,16 +174,20 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_clicked()
 {
-    ui->label->setText("Приветик");
+    QSettings settings("config.ini", QSettings::IniFormat);
+    QString log = settings.value("login").toString();
+    QString pass = settings.value("password").toString();
+    ui->label->setText(log + "; " + pass);
 }
 
 /* Метод, который обрабатывает событие закрытия окна приложения */
 void MainWindow::closeEvent(QCloseEvent * event)
 {
     /* Если окно видимо, то завершение приложения игнорируется, а окно просто скрывается */
-    if(this->isVisible()){
+    if(this->isVisible())
+    {
         event->ignore();
-        this->hide();
+        this->HideApp();
     }
 }
 
@@ -124,11 +203,27 @@ void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
         }
         else
         {
-            this->hide();
+            hide();
         }
-
         break;
     default:
         break;
     }
+}
+
+void MainWindow::on_action_3_triggered()
+{
+    ExitApp();
+}
+
+void MainWindow::on_action_triggered()
+{
+    HideApp();
+}
+
+void MainWindow::on_action_5_triggered()
+{
+    SettingWindow sw;
+    sw.setModal(true);
+    sw.exec();
 }

@@ -6,6 +6,7 @@
 #include <QCloseEvent>
 #include <QSystemTrayIcon>
 #include <QAction>
+#include <QSettings>
 
 namespace Ui {
 class MainWindow;
@@ -19,6 +20,7 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+
 protected:
     void closeEvent(QCloseEvent * event);
 
@@ -28,8 +30,16 @@ private slots:
     void iconActivated(QSystemTrayIcon::ActivationReason reason);
     /* Слот на таймаут таймера */
     void onTimeout();
-    /* Слот на нажатие кнопки выход в меню трея */
+    /* Слот закрытия приложения */
     void ExitApp();
+    /* Слот скрытия приложения в трей */
+    void HideApp();
+
+    void on_action_triggered();
+
+    void on_action_3_triggered();
+
+    void on_action_5_triggered();
 
 private:
     Ui::MainWindow *ui;
