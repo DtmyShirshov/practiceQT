@@ -12,7 +12,7 @@ SettingWindow::SettingWindow(QWidget *parent) :
     ui->setupUi(this);
 
     QSettings settings("config.ini", QSettings::IniFormat);
-
+    /* Если файл есть(при запуске настроек из основного окна), то подставить сохраненные значения */
     if(QFile("config.ini").exists())
     {
         QString log = settings.value("login").toString();
@@ -58,11 +58,14 @@ void SettingWindow::on_pushButton_clicked()
 {
     QString log = ui->log->text();
     QString pass = ui->pass->text();
-    if(log != "" && pass != "")
+    /* защита от пустых полей */
+    if(log != "" || pass != "")
     {
         QSettings settings("config.ini", QSettings::IniFormat);
+        /* сохранение логина и пароля*/
         settings.setValue("login", log);
         settings.setValue("password", pass);
+        /* сохранение интервала таймера */
         switch (ui->comboBox->currentIndex())
         {
         case 0:
@@ -84,13 +87,12 @@ void SettingWindow::on_pushButton_clicked()
             break;
         }
 
-        QMessageBox msg;
-        msg.setWindowTitle("Подтвердите действие");
-        msg.setText("Приложение будет перезапущено");
-        msg.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-        msg.raise();
-        msg.open();
-        if(msg.exec() == QMessageBox::Yes)
+        QMessageBox* msg = new QMessageBox(this);
+        msg->setWindowTitle("Подтвердите действие");
+        msg->setText("Приложение будет перезапущено");
+        msg->setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+        msg->open();
+        if(msg->exec() == QMessageBox::Yes)
         {
             qDebug("Сохранил настройки");
             //перезапуск приложения!
@@ -99,11 +101,15 @@ void SettingWindow::on_pushButton_clicked()
         }
         else
         {
-           msg.close();
+           msg->close();
         }
     }
     else
     {
-
+        QMessageBox* msg = new QMessageBox(this);
+        msg->setWindowTitle("Ошибка ввода");
+        msg->setText("Введите логин и пароль!");
+        msg->setModal(true);
+        msg->open();
     }
 }
