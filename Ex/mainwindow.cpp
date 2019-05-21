@@ -57,7 +57,6 @@ MainWindow::MainWindow(QWidget *parent) :
     QTimer* timer = new QTimer(this);
     timer->start(timerInterval);
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
-
 }
 
 /* Выход из приложения с подтверждением действия */
@@ -154,14 +153,12 @@ void MainWindow::HideApp(){
 
 /* Действие на таймаут таймера */
 void MainWindow::onTimeout(){
-
    QSound* sound=new QSound(":\\new\\alarm_02.wav");
    sound->play();
-
    QMessageBox* msg = new QMessageBox(this);
    msg->setWindowTitle("Действие");
    msg->setText("Внимание");
-   msg->setInformativeText("Прошло  секунд!");
+   msg->setInformativeText("Прошло секунд!");
    msg->raise();
    msg->show();
 
@@ -171,7 +168,7 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
-
+/* отобразить логин и пароль из файла */
 void MainWindow::on_pushButton_clicked()
 {
     QSettings settings("config.ini", QSettings::IniFormat);
@@ -226,4 +223,39 @@ void MainWindow::on_action_5_triggered()
     SettingWindow sw;
     sw.setModal(true);
     sw.exec();
+}
+
+void MainWindow::on_pushButton_2_clicked()
+{
+    ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
+
+    QTableWidgetItem* item = new QTableWidgetItem();
+    item->setText("Зеленый");
+    item->setTextAlignment(Qt::AlignCenter);
+    item->setBackground(Qt::green);
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, item);
+
+
+}
+
+void MainWindow::on_pushButton_3_clicked()
+{
+    ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
+
+    QTableWidgetItem* item = new QTableWidgetItem();
+    item->setText("Синий");
+    item->setTextAlignment(Qt::AlignCenter);
+    item->setBackground(Qt::blue);
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, item);
+}
+
+void MainWindow::on_pushButton_4_clicked()
+{
+    ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
+
+    QTableWidgetItem* item = new QTableWidgetItem();
+    item->setText("Красный");
+    item->setTextAlignment(Qt::AlignCenter);
+    item->setBackground(Qt::red);
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, item);
 }
