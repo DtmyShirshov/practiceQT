@@ -42,6 +42,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(hideWindow, SIGNAL(triggered()), this, SLOT(HideApp()));
     connect(quitAction, SIGNAL(triggered()), this, SLOT(ExitApp()));
 
+
+
     /* Добавляем кнопки в контекстное меню */
     menu->addAction(viewWindow);
     menu->addAction(hideWindow);
@@ -57,6 +59,8 @@ MainWindow::MainWindow(QWidget *parent) :
     QTimer* timer = new QTimer(this);
     timer->start(timerInterval);
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
+
+    ui->tableWidget->setColumnHidden(1, true);
 }
 
 /* Выход из приложения с подтверждением действия */
@@ -229,12 +233,17 @@ void MainWindow::on_pushButton_2_clicked()
 {
     ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
 
+    QTableWidgetItem* item1 = new QTableWidgetItem();
+    item1->setText("3");
+
     QTableWidgetItem* item = new QTableWidgetItem();
     item->setText("Зеленый");
     item->setTextAlignment(Qt::AlignCenter);
     item->setBackground(Qt::green);
     ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, item);
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 1, item1);
 
+    ui->tableWidget->sortItems(1);
 
 }
 
@@ -242,20 +251,34 @@ void MainWindow::on_pushButton_3_clicked()
 {
     ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
 
+    QTableWidgetItem* item1 = new QTableWidgetItem();
+    item1->setText("2");
+
     QTableWidgetItem* item = new QTableWidgetItem();
     item->setText("Синий");
     item->setTextAlignment(Qt::AlignCenter);
     item->setBackground(Qt::blue);
     ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, item);
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 1, item1);
+
+    ui->tableWidget->sortItems(1);
+
 }
 
 void MainWindow::on_pushButton_4_clicked()
 {
     ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
 
+    QTableWidgetItem* item1 = new QTableWidgetItem();
+    item1->setText("1");
+
     QTableWidgetItem* item = new QTableWidgetItem();
     item->setText("Красный");
     item->setTextAlignment(Qt::AlignCenter);
     item->setBackground(Qt::red);
     ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, item);
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 1, item1);
+
+    ui->tableWidget->sortItems(1);
+
 }
