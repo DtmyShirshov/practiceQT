@@ -1,5 +1,6 @@
 #include "settingwindow.h"
 #include "ui_settingwindow.h"
+#include "json.h"
 #include <QProcess>
 #include <QSettings>
 #include <QMessageBox>
@@ -17,11 +18,12 @@ SettingWindow::SettingWindow(QWidget *parent) :
     {
         QString log = settings.value("login").toString();
         QString pass = settings.value("password").toString();
+        QString IP = settings.value("IP").toString();
         int timerInterval = settings.value("timer").toInt();
 
         this->ui->log->setText(log);
         this->ui->pass->setText(pass);
-
+        this->ui->IP->setText(IP);
         switch (timerInterval)
         {
         case 10:
@@ -56,59 +58,78 @@ void SettingWindow::on_pushButton_2_clicked()
 /* сохранение настроек в файл */
 void SettingWindow::on_pushButton_clicked()
 {
+    json j;
     QString log = ui->log->text();
     QString pass = ui->pass->text();
+    QString IP = ui->IP->text();
     /* защита от пустых полей */
-    if(log != "" || pass != "")
+
+    if(log != "" || pass != "" || IP != "")
     {
         QSettings settings("config.ini", QSettings::IniFormat);
-        /* сохранение логина и пароля*/
-        settings.setValue("login", log);
-        settings.setValue("password", pass);
-        /* сохранение интервала таймера */
-        switch (ui->comboBox->currentIndex())
-        {
-        case 0:
-            settings.setValue("timer", 10);
-            break;
-        case 1:
-            settings.setValue("timer", 15);
-            break;
-        case 2:
-            settings.setValue("timer", 20);
-            break;
-        case 3:
-            settings.setValue("timer", 25);
-            break;
-        case 4:
-            settings.setValue("timer", 30);
-            break;
-        default:
-            break;
-        }
 
-        QMessageBox* msg = new QMessageBox(this);
-        msg->setWindowTitle("Подтвердите действие");
-        msg->setText("Приложение будет перезапущено");
-        msg->setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-        msg->open();
-        if(msg->exec() == QMessageBox::Yes)
+        QJsonObject jAuth = j.Authorization(IP, log, pass);
+        /* если авторизация прошла без ошибок, то сохранить и перезапустить,
+         * если ошибка есть, то вывести её на экран */
+        if(!jAuth.contains("error"))
         {
-            qDebug("Сохранил настройки");
-            //перезапуск приложения!
-            qApp->quit();
-            QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+            /* сохранение логина пароля и url*/
+            settings.setValue("login", log);
+            settings.setValue("password", pass);
+            settings.setValue("IP", IP);
+            /* сохранение интервала таймера */
+            switch (ui->comboBox->currentIndex())
+            {
+            case 0:
+                settings.setValue("timer", 10);
+                break;
+            case 1:
+                settings.setValue("timer", 15);
+                break;
+            case 2:
+                settings.setValue("timer", 20);
+                break;
+            case 3:
+                settings.setValue("timer", 25);
+                break;
+            case 4:
+                settings.setValue("timer", 30);
+                break;
+            default:
+                break;
+            }
+
+            QMessageBox* msg = new QMessageBox(this);
+            msg->setWindowTitle("Подтвердите действие");
+            msg->setText("Приложение будет перезапущено");
+            msg->setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
+            msg->open();
+            if(msg->exec() == QMessageBox::Yes)
+            {
+                qDebug("Сохранил настройки");
+                //перезапуск приложения!
+                qApp->quit();
+                QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+            }
+            else
+            {
+               msg->close();
+            }
         }
         else
         {
-           msg->close();
+           QJsonObject error = jAuth["error"].toObject();
+           QMessageBox* msg = new QMessageBox(this);
+           msg->setWindowTitle("Ошибка!");
+           msg->setText(error["data"].toString());
+           msg->open();
         }
     }
     else
     {
         QMessageBox* msg = new QMessageBox(this);
         msg->setWindowTitle("Ошибка ввода");
-        msg->setText("Введите логин и пароль!");
+        msg->setText("Обязательно введите логин, пароль и IP!");
         msg->setModal(true);
         msg->open();
     }

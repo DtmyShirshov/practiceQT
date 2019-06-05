@@ -7,6 +7,9 @@
 #include <QSystemTrayIcon>
 #include <QAction>
 #include <QSettings>
+#include <QtNetwork>
+#include <QSound>
+#include "json.h"
 
 namespace Ui {
 class MainWindow;
@@ -19,13 +22,16 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    json jsn;
+
+
+
 
 
 protected:
     void closeEvent(QCloseEvent * event);
 
 private slots:
-    void on_pushButton_clicked();
     /* Слот, который будет принимать сигнал от события нажатия на иконку приложения в трее */
     void iconActivated(QSystemTrayIcon::ActivationReason reason);
     /* Слот на таймаут таймера */
@@ -35,22 +41,26 @@ private slots:
     /* Слот скрытия приложения в трей */
     void HideApp();
 
-    void on_action_triggered();
+    void on_HideApp_triggered();
 
-    void on_action_3_triggered();
+    void on_Settings_triggered();
 
-    void on_action_5_triggered();
+    void on_Exit_triggered();
+    /* Слот обработки текста проблемы, добавления его в таблицу, оповещения */
+    void SetItem(QString text);
 
-    void on_pushButton_2_clicked();
+    void GetProblems();
 
-    void on_pushButton_3_clicked();
 
-    void on_pushButton_4_clicked();
+    void on_pushButton_clicked();
 
 private:
-    Ui::MainWindow *ui;
     // Объявление объекта будущей иконки приложения для трея
     QSystemTrayIcon *trayIcon;
+    QNetworkAccessManager manager;
+    Ui::MainWindow *ui;
+    QJsonArray alreadyExists;
+    QSound *sound;
 
 };
 

@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui multimedia
+QT       += core gui multimedia network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -25,11 +25,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
 SOURCES += \
+        json.cpp \
         main.cpp \
         mainwindow.cpp \
         settingwindow.cpp
 
 HEADERS += \
+        json.h \
         mainwindow.h \
         settingwindow.h
 

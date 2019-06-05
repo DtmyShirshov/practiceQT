@@ -1,12 +1,15 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "settingwindow.h"
+#include "json.h"
 #include <QtWidgets>
 #include <QTimer>
 #include <QMessageBox>
 #include <QtMultimedia/QSound>
 #include <QApplication>
 #include <QSettings>
+#include <QtNetwork>
+#include <QString>
 
 
 
@@ -14,9 +17,13 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+
+
     /* Забираем заданный в настройках интервал таймера из файла config.ini */
     QSettings settings("config.ini", QSettings::IniFormat);
     int timerInterval = settings.value("timer").toInt() * 1000;
+
+    jsn.Authorization(settings.value("IP").toString(), settings.value("login").toString(), settings.value("password").toString());
 
     ui->setupUi(this);
     this->setWindowTitle("My First Tray Programm");
@@ -61,6 +68,185 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(timer, SIGNAL(timeout()), this, SLOT(onTimeout()));
 
     ui->tableWidget->setColumnHidden(1, true);
+
+    sound = new QSound(":\\new\\alarm_02.wav");
+
+}
+
+
+
+/* Действие на таймаут таймера */
+void MainWindow::onTimeout(){
+    GetProblems();
+    qDebug()<<"Отправил запрос";
+}
+
+void MainWindow::GetProblems(){
+
+    QJsonArray problemsIDs(jsn.GetProblemsIDs());
+
+    QJsonArray problemIDsOK;
+
+    for(int i = 0; i < problemsIDs.count(); ++i)
+    {
+        if(!alreadyExists.contains(problemsIDs.at(i)))
+        {
+            alreadyExists.append(QJsonValue(problemsIDs.at(i)));
+            problemIDsOK.append(QJsonValue(problemsIDs.at(i)));
+        }
+        else
+        {
+            qDebug()<< "Проблема уже выведена в таблицу";
+        }
+    }
+
+    QJsonArray problems = jsn.GetProblemsAlerts(problemIDsOK);
+
+    for(auto i = problems.begin(); i != problems.end(); ++i)
+    {
+        QJsonObject jO = i->toObject();
+        SetItem(jO["message"].toString());
+    }
+}
+
+void MainWindow::SetItem(QString problemMessage)
+{
+    ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
+
+    problemMessage.chop(1);
+    QStringList problemMessagelist = problemMessage.split("\r\n");
+
+    QString host = problemMessagelist.at(0);
+    host.remove("HOST: ");
+    qDebug()<<host;
+
+    QString problem = problemMessagelist.at(1);
+    problem.remove("TRIGGER_NAME: ");
+    qDebug()<<problem;
+
+    QString severitity = problemMessagelist.at(3);
+    severitity.remove("TRIGGER_SEVERITY: ");
+    qDebug()<<severitity;
+
+    QTableWidgetItem* itemSeveritity = new QTableWidgetItem();
+
+    QTableWidgetItem* itemProblem = new QTableWidgetItem();
+    itemProblem->setText(problem);
+
+    QColor color;
+    if(severitity == "Информация")
+    {
+        color.setRgb(30,144,255,255);
+        itemSeveritity->setText("5");
+        itemProblem->setBackgroundColor(color);
+    }
+    if(severitity == "Предупреждение")
+    {
+        color.setRgb(255,215,0,255);
+        itemSeveritity->setText("4");
+        itemProblem->setBackgroundColor(color);
+    }
+    if(severitity == "Средняя")
+    {
+        color.setRgb(255,165,0,255);
+        itemSeveritity->setText("3");
+        itemProblem->setBackgroundColor(color);
+    }
+    if(severitity == "Высокая")
+    {
+        color.setRgb(255,99,71,255);
+        itemSeveritity->setText("2");
+        itemProblem->setBackgroundColor(color);
+    }
+    if(severitity == "Чрезвычайная")
+    {
+        color.setRgb(255,0,0,255);
+        itemSeveritity->setText("1");
+        itemProblem->setBackgroundColor(color);
+    }
+
+    QString dateTime = problemMessagelist.at(4);
+    dateTime.remove("DATETIME: ");
+
+    QTableWidgetItem* itemHost = new QTableWidgetItem();
+    itemHost->setText(host);
+
+
+    QTableWidgetItem* itemDateTime = new QTableWidgetItem();
+    itemDateTime->setText(dateTime);
+
+
+
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 2, itemHost);
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 3, itemProblem);
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 1, itemSeveritity);
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, itemDateTime);
+
+    QTableWidgetItem* item = new QTableWidgetItem();
+    item->setTextAlignment(Qt::AlignCenter);
+
+    ui->tableWidget->resizeColumnsToContents();
+    //
+
+    sound->play();
+
+    QMessageBox* msg = new QMessageBox(this);
+    msg->setWindowTitle(severitity + "!");
+    msg->setText(dateTime + "\n" + host + "\n" + problem);
+    msg->setWindowFlag(Qt::WindowStaysOnTopHint);
+    msg->show();
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+/* Метод, который обрабатывает событие закрытия окна приложения */
+void MainWindow::closeEvent(QCloseEvent * event)
+{
+    /* Если окно видимо, то завершение приложения игнорируется, а окно просто скрывается */
+    if(this->isVisible())
+    {
+        event->ignore();
+        this->HideApp();
+    }
+}
+
+/* Метод, который обрабатывает нажатие на иконку приложения в трее */
+void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
+{
+    switch (reason){
+    case QSystemTrayIcon::Trigger:
+    /* если окно видимо, то оно скрывается, и наоборот, если скрыто, то разворачивается на экран */
+        if(!this->isVisible())
+        {
+            this->show();
+        }
+        else
+        {
+            hide();
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void MainWindow::on_Settings_triggered()
+{
+    SettingWindow sw;
+    sw.exec();
+}
+
+void MainWindow::on_HideApp_triggered()
+{
+    HideApp();
+}
+
+void MainWindow::on_Exit_triggered()
+{
+    ExitApp();
 }
 
 /* Выход из приложения с подтверждением действия */
@@ -155,130 +341,7 @@ void MainWindow::HideApp(){
     }
 }
 
-/* Действие на таймаут таймера */
-void MainWindow::onTimeout(){
-   QSound* sound=new QSound(":\\new\\alarm_02.wav");
-   sound->play();
-   QMessageBox* msg = new QMessageBox(this);
-   msg->setWindowTitle("Действие");
-   msg->setText("Внимание");
-   msg->setInformativeText("Прошло секунд!");
-   msg->raise();
-   msg->show();
-
-}
-
-MainWindow::~MainWindow()
-{
-    delete ui;
-}
-/* отобразить логин и пароль из файла */
 void MainWindow::on_pushButton_clicked()
 {
-    QSettings settings("config.ini", QSettings::IniFormat);
-    QString log = settings.value("login").toString();
-    QString pass = settings.value("password").toString();
-    ui->label->setText(log + "; " + pass);
-}
-
-/* Метод, который обрабатывает событие закрытия окна приложения */
-void MainWindow::closeEvent(QCloseEvent * event)
-{
-    /* Если окно видимо, то завершение приложения игнорируется, а окно просто скрывается */
-    if(this->isVisible())
-    {
-        event->ignore();
-        this->HideApp();
-    }
-}
-
-/* Метод, который обрабатывает нажатие на иконку приложения в трее */
-void MainWindow::iconActivated(QSystemTrayIcon::ActivationReason reason)
-{
-    switch (reason){
-    case QSystemTrayIcon::Trigger:
-    /* если окно видимо, то оно скрывается, и наоборот, если скрыто, то разворачивается на экран */
-        if(!this->isVisible())
-        {
-            this->show();
-        }
-        else
-        {
-            hide();
-        }
-        break;
-    default:
-        break;
-    }
-}
-
-void MainWindow::on_action_3_triggered()
-{
-    ExitApp();
-}
-
-void MainWindow::on_action_triggered()
-{
-    HideApp();
-}
-
-void MainWindow::on_action_5_triggered()
-{
-    SettingWindow sw;
-    sw.setModal(true);
-    sw.exec();
-}
-
-void MainWindow::on_pushButton_2_clicked()
-{
-    ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
-
-    QTableWidgetItem* item1 = new QTableWidgetItem();
-    item1->setText("3");
-
-    QTableWidgetItem* item = new QTableWidgetItem();
-    item->setText("Зеленый");
-    item->setTextAlignment(Qt::AlignCenter);
-    item->setBackground(Qt::green);
-    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, item);
-    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 1, item1);
-
-    ui->tableWidget->sortItems(1);
-
-}
-
-void MainWindow::on_pushButton_3_clicked()
-{
-    ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
-
-    QTableWidgetItem* item1 = new QTableWidgetItem();
-    item1->setText("2");
-
-    QTableWidgetItem* item = new QTableWidgetItem();
-    item->setText("Синий");
-    item->setTextAlignment(Qt::AlignCenter);
-    item->setBackground(Qt::blue);
-    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, item);
-    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 1, item1);
-
-    ui->tableWidget->sortItems(1);
-
-}
-
-void MainWindow::on_pushButton_4_clicked()
-{
-    ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
-
-    QTableWidgetItem* item1 = new QTableWidgetItem();
-    item1->setText("1");
-
-    QTableWidgetItem* item = new QTableWidgetItem();
-    item->setText("Красный");
-    item->setTextAlignment(Qt::AlignCenter);
-    item->setBackground(Qt::red);
-    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, item);
-    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 1, item1);
-
-    ui->tableWidget->sortItems(1);
-
+    ui->tableWidget->sortItems(0);
 }
