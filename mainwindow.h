@@ -22,11 +22,6 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    json jsn;
-
-
-
-
 
 protected:
     void closeEvent(QCloseEvent * event);
@@ -51,16 +46,24 @@ private slots:
 
     void GetProblems();
 
+    void DeleteResolvedProblems();
+
+    void on_radioButton_clicked();
+
+    void on_radioButton_2_clicked();
 
     void on_pushButton_clicked();
 
 private:
+    json jsn;
     // Объявление объекта будущей иконки приложения для трея
     QSystemTrayIcon *trayIcon;
-    QNetworkAccessManager manager;
+    QSound *sound;
     Ui::MainWindow *ui;
     QJsonArray alreadyExists;
-    QSound *sound;
+    QNetworkAccessManager manager;
+    QString sorting;
+    int launchDateTime;
 
 };
 

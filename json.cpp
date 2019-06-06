@@ -45,13 +45,10 @@ QJsonObject json::Authorization(QString URL, QString log, QString pass)
     return jsonResponse;
 }
 
-QJsonArray json::GetProblemsIDs()
+QJsonArray json::GetProblemsIDs(int currentDateTime)
 {
     QJsonArray result;
     QSettings settings("config.ini", QSettings::IniFormat);
-    int currentDateTime;
-
-    currentDateTime = (int)QDateTime::currentDateTime().toTime_t() - settings.value("timer").toInt();
 
     if(settings.contains("authkey"))
     {
@@ -136,36 +133,11 @@ QJsonArray json::GetProblemsAlerts(QJsonArray problemsIDs)
 
     QJsonObject jsonResponse = QJsonDocument::fromJson(reply->readAll()).object();
 
-   // qDebug() << jsonResponse;
+    //qDebug() << jsonResponse;
 
     QJsonArray result = jsonResponse["result"].toArray();
 
     return result;
-}
-
-void json::GetProblemsAlertsText(QJsonObject jObj)
-{
-
-
-
-
-
-
-
-
-
-
-
-/*
-
-    text.chop(1);
-    QStringList list = text.split("\r\n");
-    for(auto i = 0; i != 5; ++i)
-    {
-       qDebug()<<list.at(i);
-    }
-
-*/
 }
 
 

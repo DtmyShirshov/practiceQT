@@ -21,6 +21,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     /* Забираем заданный в настройках интервал таймера из файла config.ini */
     QSettings settings("config.ini", QSettings::IniFormat);
+    /* запоминаем время отправления первого запроса */
+    launchDateTime = (int)QDateTime::currentDateTime().toTime_t() + settings.value("timer").toInt();
+
     int timerInterval = settings.value("timer").toInt() * 1000;
 
     jsn.Authorization(settings.value("IP").toString(), settings.value("login").toString(), settings.value("password").toString());
@@ -69,22 +72,29 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->tableWidget->setColumnHidden(1, true);
 
-    sound = new QSound(":\\new\\alarm_02.wav");
+    sorting = "time";
 
+    sound = new QSound(":\\new\\alarm_02.wav");
+    qDebug()<< sorting;
+    qDebug()<< QString::number(launchDateTime);
 }
 
-
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
 
 /* Действие на таймаут таймера */
 void MainWindow::onTimeout(){
     GetProblems();
+    DeleteResolvedProblems();
     qDebug()<<"Отправил запрос";
 }
 
 void MainWindow::GetProblems(){
 
-    QJsonArray problemsIDs(jsn.GetProblemsIDs());
-
+    QSettings settings("config.ini", QSettings::IniFormat);
+    QJsonArray problemsIDs(jsn.GetProblemsIDs((int)QDateTime::currentDateTime().toTime_t() - settings.value("timer").toInt())); //массив ID полученных проблем
     QJsonArray problemIDsOK;
 
     for(int i = 0; i < problemsIDs.count(); ++i)
@@ -126,7 +136,12 @@ void MainWindow::SetItem(QString problemMessage)
 
     QString severitity = problemMessagelist.at(3);
     severitity.remove("TRIGGER_SEVERITY: ");
+
+    QString event_id = problemMessagelist.at(9);
+    event_id.remove("EVENT_ID: ");
     qDebug()<<severitity;
+
+
 
     QTableWidgetItem* itemSeveritity = new QTableWidgetItem();
 
@@ -171,22 +186,28 @@ void MainWindow::SetItem(QString problemMessage)
     QTableWidgetItem* itemHost = new QTableWidgetItem();
     itemHost->setText(host);
 
-
     QTableWidgetItem* itemDateTime = new QTableWidgetItem();
     itemDateTime->setText(dateTime);
 
-
+    QTableWidgetItem* itemEvent_id = new QTableWidgetItem();
+    itemEvent_id->setText(event_id);
 
     ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 2, itemHost);
     ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 3, itemProblem);
     ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 1, itemSeveritity);
     ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, itemDateTime);
-
-    QTableWidgetItem* item = new QTableWidgetItem();
-    item->setTextAlignment(Qt::AlignCenter);
+    ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 4, itemEvent_id);
 
     ui->tableWidget->resizeColumnsToContents();
-    //
+
+    if(sorting == "time")
+    {
+        ui->tableWidget->sortItems(0,Qt::DescendingOrder);
+    }
+    if(sorting == "severitity")
+    {
+        ui->tableWidget->sortItems(1);
+    }
 
     sound->play();
 
@@ -197,10 +218,36 @@ void MainWindow::SetItem(QString problemMessage)
     msg->show();
 }
 
-MainWindow::~MainWindow()
-{
-    delete ui;
+void MainWindow::DeleteResolvedProblems(){
+
+    QJsonArray problemsIDs(jsn.GetProblemsIDs(launchDateTime));
+
+    qDebug()<< QString::number(launchDateTime);
+
+    for(int i = 0; i < alreadyExists.count(); ++i)
+    {
+        if(!problemsIDs.contains(alreadyExists.at(i)))
+        {
+            QList<QTableWidgetItem*> item = ui->tableWidget->findItems(alreadyExists.at(i).toString(), Qt::MatchExactly);
+            if(!item.empty())
+            {
+                for(int j = 0; j < item.count(); j++)
+                {
+                 int row = item.at(j)->row();
+                 ui->tableWidget->removeRow(row);
+                }
+
+                alreadyExists.removeAt(i);
+            }
+        }
+        else
+        {
+            continue;
+        }
+    }
 }
+
+
 
 /* Метод, который обрабатывает событие закрытия окна приложения */
 void MainWindow::closeEvent(QCloseEvent * event)
@@ -341,7 +388,21 @@ void MainWindow::HideApp(){
     }
 }
 
+void MainWindow::on_radioButton_clicked()
+{
+    sorting = "time";
+    ui->tableWidget->sortItems(0,Qt::DescendingOrder);
+    qDebug()<< sorting;
+}
+
+void MainWindow::on_radioButton_2_clicked()
+{
+    sorting = "severitity";
+    ui->tableWidget->sortItems(1);
+    qDebug()<< sorting;
+}
+
 void MainWindow::on_pushButton_clicked()
 {
-    ui->tableWidget->sortItems(0);
+    onTimeout();
 }

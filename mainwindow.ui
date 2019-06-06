@@ -24,9 +24,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>110</y>
+      <y>90</y>
       <width>901</width>
-      <height>351</height>
+      <height>371</height>
      </rect>
     </property>
     <property name="font">
@@ -58,7 +58,7 @@
      <bool>false</bool>
     </property>
     <property name="columnCount">
-     <number>4</number>
+     <number>5</number>
     </property>
     <attribute name="horizontalHeaderVisible">
      <bool>false</bool>
@@ -73,14 +73,15 @@
     <column/>
     <column/>
     <column/>
+    <column/>
    </widget>
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>181</width>
-      <height>91</height>
+      <width>121</width>
+      <height>71</height>
      </rect>
     </property>
     <property name="title">
@@ -98,6 +99,9 @@
      <property name="text">
       <string>По времени</string>
      </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
     <widget class="QRadioButton" name="radioButton_2">
      <property name="geometry">
@@ -112,19 +116,19 @@
       <string>По важности</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>60</y>
-       <width>141</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Применить</string>
-     </property>
-    </widget>
+   </widget>
+   <widget class="QPushButton" name="pushButton">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>20</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PushButton</string>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">

@@ -25,9 +25,8 @@ signals:
 
 public slots:
     QJsonObject Authorization(QString URL, QString log, QString pass);
-    QJsonArray GetProblemsIDs();
+    QJsonArray GetProblemsIDs(int currentDateTime);
     QJsonArray GetProblemsAlerts(QJsonArray problemsIDs);
-    void GetProblemsAlertsText(QJsonObject jObj);
 };
 
 #endif // JSON_H
