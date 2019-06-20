@@ -8,17 +8,10 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-
-    /* решение проблемы с тем, что приложение завершалось, когда находилось в трее, с закрытием msgbox */
-    a.setQuitOnLastWindowClosed(false);
-
-
-
     /* проверка на наличие файла с настройками.
        если файла нет, то запустить окно настроек,
        а если файл есть, то запустить основное окно.
     */
-
     if(QFile("config.ini").exists())
     {
         qDebug("Файл есть");
@@ -30,6 +23,8 @@ int main(int argc, char *argv[])
     {
         qDebug("Файла нет");
         SettingWindow sw;
+        sw.setModal(true);
+        sw.setWindowFlags(Qt::WindowTitleHint | Qt::WindowCloseButtonHint);
         sw.show();
         return a.exec();
     }

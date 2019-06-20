@@ -4,12 +4,13 @@
 #
 #-------------------------------------------------
 
-QT       += core gui multimedia network
+QT += core gui multimedia network
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = Ex
+TARGET = ZabbixDesktopClient
 TEMPLATE = app
+win32: RC_ICONS = $$PWD/ZabbixIco.ico
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
@@ -23,6 +24,19 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 CONFIG += c++11
+
+
+CONFIG(debug, debug|release) {
+    #DESTDIR = $$OUT_PWD/ExDebug
+} else {
+    DESTDIR = $$OUT_PWD/ExRelease
+}
+
+CONFIG(debug, debug|release) {
+    #QMAKE_POST_LINK = $$(QTDIR)/bin/windeployqt $$OUT_PWD/ExDebug
+} else {
+    QMAKE_POST_LINK = $$(QTDIR)/bin/windeployqt $$OUT_PWD/ExRelease
+}
 
 SOURCES += \
         json.cpp \
@@ -46,3 +60,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 RESOURCES += \
     rec.qrc
+
+
+

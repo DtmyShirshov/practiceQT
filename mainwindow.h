@@ -2,13 +2,12 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QMainWindow>
 #include <QCloseEvent>
 #include <QSystemTrayIcon>
 #include <QAction>
 #include <QSettings>
-#include <QtNetwork>
 #include <QSound>
+#include <QMessageBox>
 #include "json.h"
 
 namespace Ui {
@@ -29,8 +28,6 @@ protected:
 private slots:
     /* Слот, который будет принимать сигнал от события нажатия на иконку приложения в трее */
     void iconActivated(QSystemTrayIcon::ActivationReason reason);
-    /* Слот на таймаут таймера */
-    void onTimeout();
     /* Слот закрытия приложения */
     void ExitApp();
     /* Слот скрытия приложения в трей */
@@ -52,7 +49,7 @@ private slots:
 
     void on_radioButton_2_clicked();
 
-    void on_pushButton_clicked();
+    void CloseAllMsg();
 
 private:
     json jsn;
@@ -64,7 +61,8 @@ private:
     QNetworkAccessManager manager;
     QString sorting;
     int launchDateTime;
-
+    QMessageBox* msg;
+    QList<QMessageBox*> msglist;
 };
 
 #endif // MAINWINDOW_H

@@ -2,9 +2,6 @@
 #include "mainwindow.h"
 #include <QString>
 #include <QSettings>
-#include <QtNetwork>
-#include <QDateTime>
-#include <QDate>
 
 json::json(QObject *parent) : QObject(parent)
 {
@@ -13,8 +10,6 @@ json::json(QObject *parent) : QObject(parent)
 
 QJsonObject json::Authorization(QString URL, QString log, QString pass)
 {
-    QSettings settings("config.ini", QSettings::IniFormat);
-
     url.setUrl(URL +"/api_jsonrpc.php");
 
     rqs.setUrl(url);
@@ -30,64 +25,54 @@ QJsonObject json::Authorization(QString URL, QString log, QString pass)
     paramsObj["password"] = pass;
     jsonRequest["params"] = paramsObj;
 
-    qDebug()<<jsonRequest;
-
     QString strJsonRequest(QJsonDocument(jsonRequest).toJson(QJsonDocument::Compact));
 
-    QEventLoop loop;
-    connect(&manager, &QNetworkAccessManager::finished, &loop, &QEventLoop::quit);
-    auto reply = manager.post(rqs, strJsonRequest.toUtf8());
-    loop.exec();
+    QJsonObject jsonResponse = GetJsonResonse(strJsonRequest);
 
-    QJsonObject jsonResponse = QJsonDocument::fromJson(reply->readAll()).object();
-    settings.setValue("authkey",jsonResponse["result"].toString());
+    if(jsonResponse.contains("error") || jsonResponse.isEmpty())
+    {
+        while (jsonResponse.contains("error") || jsonResponse.isEmpty())
+        {
+            jsonResponse = GetJsonResonse(strJsonRequest);
+        }
+    }
 
+    authkey = jsonResponse["result"].toString();
+    qDebug() << jsonResponse;
     return jsonResponse;
 }
 
 QJsonArray json::GetProblemsIDs(int currentDateTime)
 {
     QJsonArray result;
-    QSettings settings("config.ini", QSettings::IniFormat);
 
-    if(settings.contains("authkey"))
+    jsonRequest["jsonrpc"] = "2.0";
+    jsonRequest["method"]="problem.get";
+    jsonRequest["id"] = 1;
+    jsonRequest["auth"] = authkey;
+
+    QJsonObject paramsObj;
+    paramsObj["time_from"] = currentDateTime;
+    jsonRequest["params"] = paramsObj;
+
+    QString strJsonRequest(QJsonDocument(jsonRequest).toJson(QJsonDocument::Compact));
+
+
+    QJsonObject jsonResponse = GetJsonResonse(strJsonRequest);
+
+    if(jsonResponse.contains("error") || jsonResponse.isEmpty())
     {
-        QString URL = settings.value("IP").toString();
-
-        url.setUrl(URL +"/api_jsonrpc.php");
-
-        QNetworkRequest rqs(url);
-        rqs.setHeader(QNetworkRequest::ContentTypeHeader, "application/json-rpc");
-
-        jsonRequest["jsonrpc"] = "2.0";
-        jsonRequest["method"]="problem.get";
-        jsonRequest["id"] = 1;
-        jsonRequest["auth"] = settings.value("authkey").toString();
-
-        QJsonObject paramsObj;
-        paramsObj["time_from"] = currentDateTime;
-        jsonRequest["params"] = paramsObj;
-
-        //qDebug()<< jsonRequest;
-
-        QString strJsonRequest(QJsonDocument(jsonRequest).toJson(QJsonDocument::Compact));
-
-        QEventLoop loop;
-        connect(&manager, &QNetworkAccessManager::finished, &loop, &QEventLoop::quit);
-        auto reply = manager.post(rqs, strJsonRequest.toUtf8());
-        loop.exec();
-
-        QJsonArray jsonResponse = QJsonObject(QJsonDocument::fromJson(reply->readAll()).object())["result"].toArray();
-
-        for (auto i = jsonResponse.begin();i != jsonResponse.end(); ++i)
+        while (jsonResponse.contains("error") || jsonResponse.isEmpty())
         {
-            QJsonObject jObj = i->toObject();
-            result.append(QJsonValue(jObj["eventid"]));
+            jsonResponse = GetJsonResonse(strJsonRequest);
         }
     }
-    else
-    {
 
+    QJsonArray resultArr = jsonResponse["result"].toArray();
+    for (auto i = resultArr.begin();i != resultArr.end(); ++i)
+    {
+        QJsonObject jObj = i->toObject();
+        result.append(QJsonValue(jObj["eventid"]));
     }
 
     return result;
@@ -95,18 +80,12 @@ QJsonArray json::GetProblemsIDs(int currentDateTime)
 
 QJsonArray json::GetProblemsAlerts(QJsonArray problemsIDs)
 {
-    QSettings settings("config.ini", QSettings::IniFormat);
-
-    QString URL = settings.value("IP").toString();
-    url.setUrl(URL +"/api_jsonrpc.php");
-
-    QNetworkRequest rqs(url);
-    rqs.setHeader(QNetworkRequest::ContentTypeHeader, "application/json-rpc");
+    QJsonArray result;
 
     jsonRequest["jsonrpc"] = "2.0";
     jsonRequest["method"]="alert.get";
     jsonRequest["id"] = 1;
-    jsonRequest["auth"] = settings.value("authkey").toString();
+    jsonRequest["auth"] = authkey;
 
     QJsonObject filter;
     QJsonObject search;
@@ -124,8 +103,24 @@ QJsonArray json::GetProblemsAlerts(QJsonArray problemsIDs)
     jsonRequest["params"] = paramsObj;
 
     QString strJsonRequest(QJsonDocument(jsonRequest).toJson(QJsonDocument::Compact));
-    //qDebug() << jsonRequest;
 
+    QJsonObject jsonResponse = GetJsonResonse(strJsonRequest);
+
+    if(jsonResponse.contains("error") || jsonResponse.isEmpty())
+    {
+        while (jsonResponse.contains("error") || jsonResponse.isEmpty())
+        {
+            jsonResponse = GetJsonResonse(strJsonRequest);
+        }
+    }
+
+    result = jsonResponse["result"].toArray();
+
+    return result;
+}
+
+QJsonObject json::GetJsonResonse(QString strJsonRequest)
+{
     QEventLoop loop;
     connect(&manager, &QNetworkAccessManager::finished, &loop, &QEventLoop::quit);
     auto reply = manager.post(rqs, strJsonRequest.toUtf8());
@@ -133,11 +128,7 @@ QJsonArray json::GetProblemsAlerts(QJsonArray problemsIDs)
 
     QJsonObject jsonResponse = QJsonDocument::fromJson(reply->readAll()).object();
 
-    //qDebug() << jsonResponse;
-
-    QJsonArray result = jsonResponse["result"].toArray();
-
-    return result;
+    return jsonResponse;
 }
 
 

@@ -6,27 +6,43 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>922</width>
-    <height>505</height>
+    <width>1472</width>
+    <height>458</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1472</width>
+    <height>458</height>
+   </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>40000</width>
-    <height>35300</height>
+    <width>1472</width>
+    <height>458</height>
    </size>
+  </property>
+  <property name="font">
+   <font>
+    <pointsize>9</pointsize>
+   </font>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normalon>ZabbixIco.ico</normalon>
+   </iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QTableWidget" name="tableWidget">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>90</y>
-      <width>901</width>
-      <height>371</height>
+      <x>150</x>
+      <y>17</y>
+      <width>1312</width>
+      <height>361</height>
      </rect>
     </property>
     <property name="font">
@@ -37,7 +53,7 @@
      </font>
     </property>
     <property name="horizontalScrollBarPolicy">
-     <enum>Qt::ScrollBarAsNeeded</enum>
+     <enum>Qt::ScrollBarAlwaysOff</enum>
     </property>
     <property name="autoScroll">
      <bool>true</bool>
@@ -63,6 +79,9 @@
     <attribute name="horizontalHeaderVisible">
      <bool>false</bool>
     </attribute>
+    <attribute name="horizontalHeaderCascadingSectionResizes">
+     <bool>false</bool>
+    </attribute>
     <attribute name="horizontalHeaderDefaultSectionSize">
      <number>63</number>
     </attribute>
@@ -80,7 +99,7 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>121</width>
+      <width>135</width>
       <height>71</height>
      </rect>
     </property>
@@ -92,7 +111,7 @@
       <rect>
        <x>20</x>
        <y>20</y>
-       <width>82</width>
+       <width>101</width>
        <height>17</height>
       </rect>
      </property>
@@ -108,7 +127,7 @@
       <rect>
        <x>20</x>
        <y>40</y>
-       <width>91</width>
+       <width>101</width>
        <height>17</height>
       </rect>
      </property>
@@ -117,17 +136,172 @@
      </property>
     </widget>
    </widget>
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QGroupBox" name="groupBox_2">
     <property name="geometry">
      <rect>
-      <x>150</x>
-      <y>20</y>
-      <width>75</width>
-      <height>23</height>
+      <x>10</x>
+      <y>90</y>
+      <width>135</width>
+      <height>187</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Оповещения</string>
+    </property>
+    <widget class="QCheckBox" name="checkBox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>101</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Информация</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>121</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Предупреждение</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_3">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>60</y>
+       <width>70</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Среднее</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_4">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>80</y>
+       <width>70</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Высокая</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QCheckBox" name="checkBox_5">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>100</y>
+       <width>111</width>
+       <height>17</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Чрезвычайная</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
+       <x>12</x>
+       <y>134</y>
+       <width>101</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Закрывать через:</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="comboBox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>154</y>
+       <width>118</width>
+       <height>22</height>
+      </rect>
+     </property>
+     <property name="currentIndex">
+      <number>1</number>
+     </property>
+     <item>
+      <property name="text">
+       <string>10мин</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>30мин</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>1час</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>1мин(тест)</string>
+      </property>
+     </item>
+    </widget>
+    <widget class="Line" name="line">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>127</y>
+       <width>118</width>
+       <height>3</height>
+      </rect>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>310</x>
+      <y>380</y>
+      <width>1151</width>
+      <height>16</height>
      </rect>
     </property>
     <property name="text">
-     <string>PushButton</string>
+     <string>Количество проблем: 0</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
    </widget>
   </widget>
@@ -136,7 +310,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>922</width>
+     <width>1472</width>
      <height>19</height>
     </rect>
    </property>
