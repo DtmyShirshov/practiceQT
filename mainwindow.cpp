@@ -95,13 +95,11 @@ MainWindow::~MainWindow()
 
 void MainWindow::GetProblems()
 {
-    QSettings settings("config.ini", QSettings::IniFormat);
-
     QJsonArray problemsIDs(jsn.GetProblemsIDs(launchDateTime)); //массив ID полученных проблем
-    QJsonArray problemIDsOK;
 
     if(!problemsIDs.isEmpty())
     {
+        QJsonArray problemIDsOK;
         qDebug() << problemsIDs;
         for(int i = 0; i < problemsIDs.count(); ++i)
         {
@@ -110,22 +108,32 @@ void MainWindow::GetProblems()
                 problemIDsOK.append(QJsonValue(problemsIDs.at(i)));
             }
         }
-    }
 
-    QJsonArray problems;
-    while(problems.count() != problemIDsOK.count())
-    {
-        problems = jsn.GetProblemsAlerts(problemIDsOK);
-    }
-    if(problems.count() == problemIDsOK.count())
-    {
-        for(auto i = problems.begin(); i != problems.end(); ++i)
+        QJsonArray problems(jsn.GetProblemsAlerts(problemIDsOK));
+
+        if(problems.count() != problemIDsOK.count())
         {
-            QJsonObject jO = i->toObject();
-            SetItem(jO["message"].toString());
+            while(problems.count() != problemIDsOK.count())
+            {
+                problems = jsn.GetProblemsAlerts(problemIDsOK);
+            }
+
+            for(auto i = problems.begin(); i != problems.end(); ++i)
+            {
+                QJsonObject jO = i->toObject();
+                SetItem(jO["message"].toString());
+            }
         }
-    }
-    ui->label_2->setText("Проблем показано: " + QString::number(ui->tableWidget->rowCount()));
+        else
+        {
+            for(auto i = problems.begin(); i != problems.end(); ++i)
+            {
+                QJsonObject jO = i->toObject();
+                SetItem(jO["message"].toString());
+            }
+        }
+        ui->label_2->setText("Проблем показано: " + QString::number(ui->tableWidget->rowCount()));
+    } 
 }
 
 void MainWindow::SetItem(QString problemMessage)
@@ -223,8 +231,6 @@ void MainWindow::SetItem(QString problemMessage)
             ui->tableWidget->sortItems(1);
         }
 
-        sound->play();
-
         int closeTimeOut;
 
         switch (ui->comboBox->currentIndex())
@@ -279,6 +285,7 @@ void MainWindow::SetItem(QString problemMessage)
             msg->setText(dateTime + "\n" + host + "\n" + problem);
         }
         msglist.append(msg);
+        sound->play();
         msg->show();
     }
 }

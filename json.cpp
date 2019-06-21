@@ -29,9 +29,9 @@ QJsonObject json::Authorization(QString URL, QString log, QString pass)
 
     QJsonObject jsonResponse = GetJsonResonse(strJsonRequest);
 
-    if(jsonResponse.contains("error") || jsonResponse.isEmpty())
+    if(jsonResponse.isEmpty())
     {
-        while (jsonResponse.contains("error") || jsonResponse.isEmpty())
+        while (jsonResponse.isEmpty())
         {
             jsonResponse = GetJsonResonse(strJsonRequest);
         }
