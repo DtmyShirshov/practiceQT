@@ -12,13 +12,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     QApplication::setQuitOnLastWindowClosed(false);
-    /* Забираем заданный в настройках интервал таймера из файла config.ini */
+
     QSettings settings("config.ini", QSettings::IniFormat);
+    int timerInterval = settings.value("timer").toInt() * 1000;
 
     /* запоминаем время запуска приложения */
     launchDateTime = (int)QDateTime::currentDateTime().toTime_t();
-
-    int timerInterval = settings.value("timer").toInt() * 1000;
 
     jsn.Authorization(settings.value("IP").toString(), settings.value("login").toString(), settings.value("password").toString());
 
@@ -68,9 +67,9 @@ MainWindow::MainWindow(QWidget *parent) :
     QStringList name_table;
     name_table << "Дата/время" << "" << "Узел сети" << "Проблема";
     ui->tableWidget->setHorizontalHeaderLabels(name_table);
-    ui->tableWidget->setColumnWidth(0, 170);
+    ui->tableWidget->setColumnWidth(0, 140);
     ui->tableWidget->setColumnWidth(2, 320);
-    ui->tableWidget->setColumnWidth(3, 820);
+    ui->tableWidget->setColumnWidth(3, 850);
     ui->tableWidget->horizontalHeader()->setVisible(true);
     ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
@@ -95,211 +94,190 @@ MainWindow::~MainWindow()
 
 void MainWindow::GetProblems()
 {
-    QJsonArray problemsIDs(jsn.GetProblemsIDs(launchDateTime)); //массив ID полученных проблем
+    QJsonArray problems = jsn.GetProblems(launchDateTime);
 
-    if(!problemsIDs.isEmpty())
+    if(!problems.isEmpty())
     {
-        QJsonArray problemIDsOK;
-        qDebug() << problemsIDs;
-        for(int i = 0; i < problemsIDs.count(); ++i)
+        for(auto i = problems.begin(); i != problems.end(); ++i)
         {
-            if(!alreadyExists.contains(problemsIDs.at(i)))
-            {
-                problemIDsOK.append(QJsonValue(problemsIDs.at(i)));
-            }
+            QJsonObject jObj = i->toObject();
+            SetItems(jObj);
         }
+    }
+}
 
-        QJsonArray problems(jsn.GetProblemsAlerts(problemIDsOK));
-
-        if(problems.count() != problemIDsOK.count())
+void MainWindow::SetItems(QJsonObject problem)
+{
+    if(!alreadyExists.contains(problem["triggerid"]))
+    {
+        QList<QTableWidgetItem*> item = ui->tableWidget->findItems(problem["triggerid"].toString(), Qt::MatchExactly);
+        if(!item.isEmpty())
         {
-            while(problems.count() != problemIDsOK.count())
-            {
-                problems = jsn.GetProblemsAlerts(problemIDsOK);
-            }
-
-            for(auto i = problems.begin(); i != problems.end(); ++i)
-            {
-                QJsonObject jO = i->toObject();
-                SetItem(jO["message"].toString());
-            }
+            alreadyExists.append(problem["triggerid"]);
         }
         else
         {
-            for(auto i = problems.begin(); i != problems.end(); ++i)
+            QString description  = problem["description"].toString();
+
+            QString priority = problem["priority"].toString();
+
+            QString time = QDateTime::fromTime_t(problem["lastchange"].toString().toLongLong()).toString("dd.MM.yy / hh:mm:ss");
+
+            QJsonArray hostArr = problem["hosts"].toArray();
+            QString host = hostArr.at(0)["name"].toString();
+
+            if(description.contains("{HOST.NAME}"))
             {
-                QJsonObject jO = i->toObject();
-                SetItem(jO["message"].toString());
+                int index = description.indexOf("{HOST.NAME}");
+                description.replace(index, 11 , host);
             }
+            if(description.contains("{ITEM.LASTVALUE}"))
+            {
+                int index = description.indexOf("{ITEM.LASTVALUE}");
+                description.replace(index, 17 , problem["items"].toArray().at(0)["lastvalue"].toString());
+            }
+
+            QTableWidgetItem* itemSeveritity = new QTableWidgetItem();
+            itemSeveritity->setText(priority);
+
+            QTableWidgetItem* itemDescription = new QTableWidgetItem();
+            itemDescription->setText(description);
+
+            QColor color;
+            if(priority == "1")
+            {
+                color.setRgb(30,144,255,255);
+                itemDescription->setBackgroundColor(color);
+            }
+            if(priority == "2")
+            {
+                color.setRgb(255,215,0,255);
+                itemDescription->setBackgroundColor(color);
+            }
+            if(priority == "3")
+            {
+                color.setRgb(255,165,0,255);
+                itemDescription->setBackgroundColor(color);
+            }
+            if(priority == "4")
+            {
+                color.setRgb(255,99,71,255);
+                itemDescription->setBackgroundColor(color);
+            }
+            if(priority == "5")
+            {
+                color.setRgb(255,0,0,255);
+                itemDescription->setBackgroundColor(color);
+            }
+
+            QTableWidgetItem* itemHost = new QTableWidgetItem();
+            itemHost->setText(host);
+
+            QTableWidgetItem* itemDateTime = new QTableWidgetItem();
+            itemDateTime->setText(time);
+
+            QTableWidgetItem* itemTrigger_id = new QTableWidgetItem();
+            itemTrigger_id->setText(problem["triggerid"].toString());
+
+            /* вывод проблемы в таблицу */
+            ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
+            ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 2, itemHost);
+            ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 3, itemDescription);
+            ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 1, itemSeveritity);
+            ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, itemDateTime);
+            ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 4, itemTrigger_id);
+
+
+
+            /* сортировка записей по времени в соответствии с настроеным фильтром */
+            if(sorting == "time")
+            {
+                ui->tableWidget->sortItems(0, Qt::DescendingOrder);
+            }
+            if(sorting == "severitity")
+            {
+                ui->tableWidget->sortItems(0, Qt::DescendingOrder);
+                ui->tableWidget->sortItems(1);
+            }
+
+            int closeTimeOut;
+
+            switch (ui->comboBox->currentIndex())
+            {
+            case 0:
+                closeTimeOut = 10 * 60000;
+                break;
+            case 1:
+                closeTimeOut = 30 * 60000;
+                break;
+            case 2:
+                closeTimeOut = 60 * 60000;
+                break;
+            case 3:
+                closeTimeOut = 1 * 60000;
+                break;
+            default:
+                closeTimeOut = 30 * 60000;
+                break;
+            }
+
+            QMessageBox* msg = new QMessageBox(this);
+            msg->setAttribute(Qt::WA_DeleteOnClose, true);
+            msg->setStandardButtons(QMessageBox::Ok);
+            msg->button(QMessageBox::Ok)->animateClick(closeTimeOut);
+            msg->setWindowFlag(Qt::WindowStaysOnTopHint);
+
+            /* вывод оповещения в соответствии с настроеным фильтром */
+            if(ui->checkBox->isChecked() == true && priority == "1")
+            {
+                msg->setWindowTitle("Информация!");
+                msg->setText(time + "\n" + host + "\n" + description);
+            }
+            if(ui->checkBox_2->isChecked() == true && priority == "2")
+            {
+                msg->setWindowTitle("Предупреждение!");
+                msg->setText(time + "\n" + host + "\n" + description);
+            }
+            if(ui->checkBox_3->isChecked() == true && priority == "3")
+            {
+                msg->setWindowTitle("Средняя!");
+                msg->setText(time + "\n" + host + "\n" + description);
+            }
+            if(ui->checkBox_4->isChecked() == true && priority == "4")
+            {
+                msg->setWindowTitle("Высокая!");
+                msg->setText(time + "\n" + host + "\n" + description);
+            }
+            if(ui->checkBox_5->isChecked() == true && priority == "5")
+            {
+                msg->setWindowTitle("Чрезвычайная!");
+                msg->setText(time + "\n" + host + "\n" + description);
+            }
+            msglist.append(msg);
+            sound->play();
+            msg->show();
         }
-        ui->label_2->setText("Проблем показано: " + QString::number(ui->tableWidget->rowCount()));
-    } 
-}
-
-void MainWindow::SetItem(QString problemMessage)
-{
-    /* парсим текст проблемы, удаляем лишнее */
-    problemMessage.chop(1);
-    QStringList problemMessagelist = problemMessage.split("\r\n");
-
-    QString host = problemMessagelist.at(0);
-    host.remove("HOST: ");
-
-    QString problem = problemMessagelist.at(1);
-    problem.remove("TRIGGER_NAME: ");
-
-    QString severitity = problemMessagelist.at(3);
-    severitity.remove("TRIGGER_SEVERITY: ");
-
-    QString event_id = problemMessagelist.at(9);
-    event_id.remove("EVENT_ID: ");
-
-    QList<QTableWidgetItem*> item = ui->tableWidget->findItems(event_id, Qt::MatchExactly);
-    if(!item.isEmpty())
-    {
-        alreadyExists.append(QJsonValue(event_id));
     }
-    else
-    {
-        /* подготавливаем айтемы */
-        QTableWidgetItem* itemSeveritity = new QTableWidgetItem();
-
-        QTableWidgetItem* itemProblem = new QTableWidgetItem();
-        itemProblem->setText(problem);
-
-        /* устанавливем цвет фона в соответствии с важностью проблемы */
-        QColor color;
-        if(severitity == "Информация")
-        {
-            color.setRgb(30,144,255,255);
-            itemSeveritity->setText("5");
-            itemProblem->setBackgroundColor(color);
-        }
-        if(severitity == "Предупреждение")
-        {
-            color.setRgb(255,215,0,255);
-            itemSeveritity->setText("4");
-            itemProblem->setBackgroundColor(color);
-        }
-        if(severitity == "Средняя")
-        {
-            color.setRgb(255,165,0,255);
-            itemSeveritity->setText("3");
-            itemProblem->setBackgroundColor(color);
-        }
-        if(severitity == "Высокая")
-        {
-            color.setRgb(255,99,71,255);
-            itemSeveritity->setText("2");
-            itemProblem->setBackgroundColor(color);
-        }
-        if(severitity == "Чрезвычайная")
-        {
-            color.setRgb(255,0,0,255);
-            itemSeveritity->setText("1");
-            itemProblem->setBackgroundColor(color);
-        }
-
-        QString dateTime = problemMessagelist.at(4);
-        dateTime.remove("DATETIME: ");
-
-        QTableWidgetItem* itemHost = new QTableWidgetItem();
-        itemHost->setText(host);
-
-        QTableWidgetItem* itemDateTime = new QTableWidgetItem();
-        itemDateTime->setText(dateTime);
-
-        QTableWidgetItem* itemEvent_id = new QTableWidgetItem();
-        itemEvent_id->setText(event_id);
-
-        /* вывод проблемы в таблицу */
-        ui->tableWidget->setRowCount(ui->tableWidget->rowCount()+1);
-        ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 2, itemHost);
-        ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 3, itemProblem);
-        ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 1, itemSeveritity);
-        ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 0, itemDateTime);
-        ui->tableWidget->setItem(ui->tableWidget->rowCount()-1, 4, itemEvent_id);
-
-        /* сортировка записей по времени в соответствии с настроеным фильтром */
-        if(sorting == "time")
-        {
-            ui->tableWidget->sortItems(0, Qt::DescendingOrder);
-        }
-        if(sorting == "severitity")
-        {
-            ui->tableWidget->sortItems(0, Qt::DescendingOrder);
-            ui->tableWidget->sortItems(1);
-        }
-
-        int closeTimeOut;
-
-        switch (ui->comboBox->currentIndex())
-        {
-        case 0:
-            closeTimeOut = 10 * 60000;
-            break;
-        case 1:
-            closeTimeOut = 30 * 60000;
-            break;
-        case 2:
-            closeTimeOut = 60 * 60000;
-            break;
-        case 3:
-            closeTimeOut = 1 * 60000;
-            break;
-        default:
-            closeTimeOut = 30 * 60000;
-            break;
-        }
-
-        msg = new QMessageBox(this);
-        msg->setAttribute(Qt::WA_DeleteOnClose, true);
-        msg->setStandardButtons(QMessageBox::Ok);
-        msg->button(QMessageBox::Ok)->animateClick(closeTimeOut);
-        msg->setWindowFlag(Qt::WindowStaysOnTopHint);
-
-        /* вывод оповещения в соответствии с настроеным фильтром */
-        if(ui->checkBox->isChecked() == true && severitity == "Информация")
-        {
-            msg->setWindowTitle(severitity + "!");
-            msg->setText(dateTime + "\n" + host + "\n" + problem);
-        }
-        if(ui->checkBox_2->isChecked() == true && severitity == "Предупреждение")
-        {
-            msg->setWindowTitle(severitity + "!");
-            msg->setText(dateTime + "\n" + host + "\n" + problem);
-        }
-        if(ui->checkBox_3->isChecked() == true && severitity == "Средняя")
-        {
-            msg->setWindowTitle(severitity + "!");
-            msg->setText(dateTime + "\n" + host + "\n" + problem);
-        }
-        if(ui->checkBox_4->isChecked() == true && severitity == "Высокая")
-        {
-            msg->setWindowTitle(severitity + "!");
-            msg->setText(dateTime + "\n" + host + "\n" + problem);
-        }
-        if(ui->checkBox_5->isChecked() == true && severitity == "Чрезвычайная")
-        {
-            msg->setWindowTitle(severitity + "!");
-            msg->setText(dateTime + "\n" + host + "\n" + problem);
-        }
-        msglist.append(msg);
-        sound->play();
-        msg->show();
-    }
+    ui->label_2->setText("Проблем показано: " + QString::number(ui->tableWidget->rowCount()));
 }
 
 void MainWindow::DeleteResolvedProblems()
 {
     if(!alreadyExists.isEmpty())
     {
-        QJsonArray problemsIDs(jsn.GetProblemsIDs(launchDateTime));
+        QJsonArray problems = jsn.GetProblems(launchDateTime);
+        QJsonArray triggerIDs;
+        for(auto i = problems.begin(); i != problems.end(); ++i)
+        {
+            QJsonObject jObj = i->toObject();
+            triggerIDs.append(jObj["triggerid"]);
+        }
+
         qDebug() << "ПроблемИД для проверки на удаление";
-        qDebug() << problemsIDs;
+        qDebug() << triggerIDs;
         for(int i = 0; i < alreadyExists.count(); ++i)
         {
-            if(!problemsIDs.contains(alreadyExists.at(i)))
+            if(!triggerIDs.contains(alreadyExists.at(i)))
             {
                 qDebug() << "Я нашел проблему на удаление! " + alreadyExists.at(i).toString();
                 QList<QTableWidgetItem*> item = ui->tableWidget->findItems(alreadyExists.at(i).toString(), Qt::MatchExactly);
@@ -317,8 +295,8 @@ void MainWindow::DeleteResolvedProblems()
                 }
             }
         }
+        ui->label_2->setText("Проблем показано: " + QString::number(ui->tableWidget->rowCount()));
     }
-    ui->label_2->setText("Проблем показано: " + QString::number(ui->tableWidget->rowCount()));
 }
 
 
@@ -375,7 +353,6 @@ void MainWindow::on_Exit_triggered()
 /* Выход из приложения с подтверждением действия */
 void MainWindow::ExitApp()
 {
-
     QSettings settings("config.ini", QSettings::IniFormat);
     /* проверка, нажимал ли пользователь на "Больше не спрашивать?"
        если да, то выйти из приложения без подтверждения действия,
@@ -389,7 +366,8 @@ void MainWindow::ExitApp()
     {
         QCheckBox* cb = new QCheckBox("Больше не спрашивать");
 
-        QMessageBox *msgE = new QMessageBox(this);
+        QMessageBox* msgE = new QMessageBox(this);
+        msgE->setAttribute(Qt::WA_DeleteOnClose);
         msgE->setWindowTitle("Подвердите дейстиве");
         msgE->setText("Вы уверены, что хотите выйти?");
         msgE->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
@@ -401,23 +379,13 @@ void MainWindow::ExitApp()
         if(msgE->exec() == QMessageBox::Yes)
         {
            QApplication::quit();
-
-           if(cb->isChecked() == true)
-           {
-               settings.setValue("dontShowExitMSG", true);
-           }
         }
-        else
+
+        if(cb->isChecked() == true)
         {
-           msgE->close();
-
-           if(cb->isChecked() == true)
-           {
-               settings.setValue("dontShowExitMSG", true);
-           }
+            settings.setValue("dontShowExitMSG", true);
         }
-    }
-
+     }
 }
 
 void MainWindow::CloseAllMsg()
@@ -448,6 +416,7 @@ void MainWindow::HideApp()
             QCheckBox* cb = new QCheckBox("Больше не спрашивать");
 
             QMessageBox *msgH = new QMessageBox(this);
+            msgH->setAttribute(Qt::WA_DeleteOnClose);
             msgH->setWindowTitle("Подвердите действие");
             msgH->setText("Приложение будет свернуто в трей!");
             msgH->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
@@ -459,18 +428,11 @@ void MainWindow::HideApp()
             if(msgH->exec() == QMessageBox::Yes)
             {
                hide();
-               if(cb->isChecked() == true)
-               {
-                   settings.setValue("dontShowHideMSG", true);
-               }
             }
-            else
+
+            if(cb->isChecked() == true)
             {
-               msgH->close();
-               if(cb->isChecked() == true)
-               {
-                   settings.setValue("dontShowHideMSG", true);
-               }
+                settings.setValue("dontShowHideMSG", true);
             }
         }
     }

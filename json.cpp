@@ -15,6 +15,7 @@ QJsonObject json::Authorization(QString URL, QString log, QString pass)
     rqs.setUrl(url);
     rqs.setHeader(QNetworkRequest::ContentTypeHeader, "application/json-rpc");
 
+    QJsonObject jsonRequest;
     jsonRequest["jsonrpc"] = "2.0";
     jsonRequest["method"]="user.login";
     jsonRequest["id"] = 1;
@@ -38,74 +39,53 @@ QJsonObject json::Authorization(QString URL, QString log, QString pass)
     }
 
     authkey = jsonResponse["result"].toString();
-    qDebug() << jsonResponse;
+    qDebug() << "Ключ: " + authkey;
     return jsonResponse;
 }
 
-QJsonArray json::GetProblemsIDs(int currentDateTime)
+QJsonArray json::GetProblems(int launchTime)
 {
-    QJsonArray result;
-
+    //создаем объект запроса
+    QJsonObject jsonRequest;
+    //заполняем запрос, указываем версию jsonrpc, указываем метод, даем id,
+    //указываем, ранеее полученный, код аутентификации
     jsonRequest["jsonrpc"] = "2.0";
-    jsonRequest["method"]="problem.get";
+    jsonRequest["method"]="trigger.get";
     jsonRequest["id"] = 1;
     jsonRequest["auth"] = authkey;
-
+    //заполняем параметры
     QJsonObject paramsObj;
-    paramsObj["time_from"] = currentDateTime;
-    jsonRequest["params"] = paramsObj;
+    paramsObj["lastChangeSince"] = launchTime;
+    QJsonArray select;
+    select.append("name");
+    select.append("lastvalue");
+    paramsObj["selectHosts"] = select;
+    paramsObj["selectItems"] = select;
+    paramsObj["skipDependent"] = 1;
+    paramsObj["expandComment"] = 1;
+    paramsObj["monitored"] = 1;
 
-    QString strJsonRequest(QJsonDocument(jsonRequest).toJson(QJsonDocument::Compact));
-
-
-    QJsonObject jsonResponse = GetJsonResonse(strJsonRequest);
-
-    if(jsonResponse.contains("error") || jsonResponse.isEmpty())
-    {
-        while (jsonResponse.contains("error") || jsonResponse.isEmpty())
-        {
-            jsonResponse = GetJsonResonse(strJsonRequest);
-        }
-    }
-
-    QJsonArray resultArr = jsonResponse["result"].toArray();
-    for (auto i = resultArr.begin();i != resultArr.end(); ++i)
-    {
-        QJsonObject jObj = i->toObject();
-        result.append(QJsonValue(jObj["eventid"]));
-    }
-
-    return result;
-}
-
-QJsonArray json::GetProblemsAlerts(QJsonArray problemsIDs)
-{
-    QJsonArray result;
-
-    jsonRequest["jsonrpc"] = "2.0";
-    jsonRequest["method"]="alert.get";
-    jsonRequest["id"] = 1;
-    jsonRequest["auth"] = authkey;
+    QJsonArray output;
+    output.append("triggerid");
+    output.append("description");
+    output.append("priority");
+    output.append("lastchange");
 
     QJsonObject filter;
-    QJsonObject search;
-    filter["sendto"] = "alerts";
-    search["message"] = "HOST:";
+    filter["value"] = 1;
 
-    QJsonObject paramsObj;
-    paramsObj["eventids"] = problemsIDs;
+    paramsObj["output"] = output;
     paramsObj["filter"] = filter;
-    paramsObj["search"] = search;
-    paramsObj["startSearch"] = QJsonValue(true);
-    paramsObj["sortfield"] = "clock";
-    paramsObj["sortorder"] = "DESC";
 
     jsonRequest["params"] = paramsObj;
 
+    //преобразуем сериализованный запрос в строку
     QString strJsonRequest(QJsonDocument(jsonRequest).toJson(QJsonDocument::Compact));
 
+    //отправляем на сервер
     QJsonObject jsonResponse = GetJsonResonse(strJsonRequest);
 
+    //получем ответ до тех пор, пока он не будет содержать ошибку или не будет пустым
     if(jsonResponse.contains("error") || jsonResponse.isEmpty())
     {
         while (jsonResponse.contains("error") || jsonResponse.isEmpty())
@@ -113,10 +93,10 @@ QJsonArray json::GetProblemsAlerts(QJsonArray problemsIDs)
             jsonResponse = GetJsonResonse(strJsonRequest);
         }
     }
-
-    result = jsonResponse["result"].toArray();
-
-    return result;
+    //преобразуем полученный результат в QJsonArray
+    QJsonArray resultArr = jsonResponse["result"].toArray();
+    //возвращем результат
+    return resultArr;
 }
 
 QJsonObject json::GetJsonResonse(QString strJsonRequest)

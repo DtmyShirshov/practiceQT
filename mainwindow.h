@@ -38,10 +38,6 @@ private slots:
     void on_Settings_triggered();
 
     void on_Exit_triggered();
-    /* Слот обработки текста проблемы, добавления его в таблицу, оповещения */
-    void SetItem(QString text);
-
-    void GetProblems();
 
     void DeleteResolvedProblems();
 
@@ -51,6 +47,10 @@ private slots:
 
     void CloseAllMsg();
 
+    void GetProblems();
+
+    void SetItems(QJsonObject jObj);
+
 private:
     json jsn;
     // Объявление объекта будущей иконки приложения для трея
@@ -58,10 +58,8 @@ private:
     QSound *sound;
     Ui::MainWindow *ui;
     QJsonArray alreadyExists;
-    QNetworkAccessManager manager;
     QString sorting;
     int launchDateTime;
-    QMessageBox* msg;
     QList<QMessageBox*> msglist;
 };
 
